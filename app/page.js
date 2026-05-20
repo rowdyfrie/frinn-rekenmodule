@@ -3,17 +3,20 @@ import { useState } from 'react';
 import StapGezin from '@/components/StapGezin';
 import StapInkomsten from '@/components/StapInkomsten';
 import StapPensioen from '@/components/StapPensioen';
-import PensioenCalculator from '@/components/PensioenCalculator';
+import StapUitgaven from '@/components/StapUitgaven';
+import StapGrafiek from '@/components/StapGrafiek';
 
 export default function Home() {
   const [stap, setStap] = useState(1);
   const [gezin, setGezin] = useState({ klant: { voornaam: '', achternaam: '', geboortedatum: '' }, partner: null, kinderen: [] });
   const [inkomsten, setInkomsten] = useState({ klantInkomsten: [], partnerInkomsten: [] });
   const [pensioen, setPensioen] = useState({ klantPensioenen: [], partnerPensioenen: [] });
+  const [uitgaven, setUitgaven] = useState({ leningdelen: [], spaaren: [], lijfrentes: [], overig: [] });
 
   function stapGezinKlaar(data) { setGezin(data); setStap(2); }
   function stapInkomstenKlaar(data) { setInkomsten(data); setStap(3); }
   function stapPensioenKlaar(data) { setPensioen(data); setStap(4); }
+  function stapUitgavenKlaar(data) { setUitgaven(data); setStap(5); }
 
   return (
     <main style={{ minHeight: '100vh', background: '#F7F5F0', fontFamily: 'Lato, sans-serif' }}>
@@ -28,40 +31,16 @@ export default function Home() {
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '3rem 1.5rem' }}>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '2rem' }}>
-          {[1, 2, 3, 4].map(n => (
+          {[1, 2, 3, 4, 5].map(n => (
             <div key={n} style={{ width: '8px', height: '8px', borderRadius: '50%', background: stap === n ? '#2A3933' : 'rgba(42,57,51,0.2)' }} />
           ))}
         </div>
 
-        {stap === 1 && (
-          <StapGezin
-            beginWaarden={gezin}
-            onVolgende={stapGezinKlaar}
-          />
-        )}
-        {stap === 2 && (
-          <StapInkomsten
-            gezin={gezin}
-            beginWaarden={inkomsten}
-            onVolgende={stapInkomstenKlaar}
-            onVorige={() => setStap(1)}
-          />
-        )}
-        {stap === 3 && (
-          <StapPensioen
-            gezin={gezin}
-            beginWaarden={pensioen}
-            onVolgende={stapPensioenKlaar}
-            onVorige={() => setStap(2)}
-          />
-        )}
-        {stap === 4 && (
-          <PensioenCalculator
-            gezin={gezin}
-            inkomsten={inkomsten}
-            pensioen={pensioen}
-          />
-        )}
+        {stap === 1 && <StapGezin beginWaarden={gezin} onVolgende={stapGezinKlaar} />}
+        {stap === 2 && <StapInkomsten gezin={gezin} beginWaarden={inkomsten} onVolgende={stapInkomstenKlaar} onVorige={() => setStap(1)} />}
+        {stap === 3 && <StapPensioen gezin={gezin} beginWaarden={pensioen} onVolgende={stapPensioenKlaar} onVorige={() => setStap(2)} />}
+        {stap === 4 && <StapUitgaven gezin={gezin} beginWaarden={uitgaven} onVolgende={stapUitgavenKlaar} onVorige={() => setStap(3)} />}
+        {stap === 5 && <StapGrafiek gezin={gezin} inkomsten={inkomsten} pensioen={pensioen} uitgaven={uitgaven} onVorige={() => setStap(4)} />}
       </div>
     </main>
   );

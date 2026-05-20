@@ -2,7 +2,6 @@
 import { useState } from 'react';
 
 const inputStijl = { width: '100%', boxSizing: 'border-box', height: '42px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 16px', fontSize: '14px', fontFamily: 'Lato, sans-serif', color: '#4a4a45', background: '#FFFFFF', outline: 'none' };
-const selectStijl = { width: '100%', boxSizing: 'border-box', height: '42px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 16px', fontSize: '14px', fontFamily: 'Lato, sans-serif', color: '#4a4a45', background: '#FFFFFF', outline: 'none', appearance: 'none', cursor: 'pointer' };
 const labelStijl = { fontSize: '13px', fontWeight: '300', color: '#8a8a82', display: 'block', marginBottom: '6px', fontFamily: 'Lato, sans-serif' };
 const sectieStijl = { fontSize: '11px', fontWeight: '700', letterSpacing: '0.08em', color: '#2A3933', textTransform: 'uppercase', marginBottom: '14px', margin: '0 0 14px 0' };
 const kaartStijl = { background: '#FFFFFF', borderRadius: '20px', padding: '28px', border: '1px solid rgba(42,57,51,0.1)', marginBottom: '12px' };
@@ -28,23 +27,18 @@ function berekenAowLeeftijd(geboortedatum) {
     { van: '1999-04-01', tot: '2000-12-31', jaren: 70, maanden: 0 },
   ];
   for (const rij of tabel) {
-    if (d >= new Date(rij.van) && d <= new Date(rij.tot)) {
-      return { jaren: rij.jaren, maanden: rij.maanden };
-    }
+    if (d >= new Date(rij.van) && d <= new Date(rij.tot)) return { jaren: rij.jaren, maanden: rij.maanden };
   }
   return { jaren: 70, maanden: 0 };
 }
 
-function berekenAowBedrag(heeftPartner) {
-  if (heeftPartner) {
-    return Math.round((1122.12 + 76.10) * 12);
-  }
-  return Math.round((1637.57 + 106.55) * 12);
-}
-
 function PensioenBlok({ naam, geboortedatum, heeftPartner, pensioenen, setPensioenen }) {
   const aowLeeftijd = berekenAowLeeftijd(geboortedatum);
-  const aowBedrag = berekenAowBedrag(heeftPartner);
+  const [aowMetPartner, setAowMetPartner] = useState(heeftPartner);
+
+  const aowBedrag = aowMetPartner
+    ? Math.round((1122.12 + 76.10) * 12)
+    : Math.round((1637.57 + 106.55) * 12);
 
   function voegToe() {
     setPensioenen([...pensioenen, { id: Date.now(), aanbieder: '', bedrag: '', jaren: 67, maanden: 0 }]);
@@ -67,12 +61,13 @@ function PensioenBlok({ naam, geboortedatum, heeftPartner, pensioenen, setPensio
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#2A3933' }}>AOW</span>
           <span style={{ fontSize: '12px', color: '#8a8a82', fontFamily: 'Lato, sans-serif' }}>Automatisch ingevuld</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
           <div>
             <label style={labelStijl}>Bruto jaarbedrag</label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: '#8a8a82', pointerEvents: 'none' }}>€</span>
-              <input style={{ ...inputStijl, paddingLeft: '28px' }} type="number" defaultValue={aowBedrag} />
+              <input style={{ ...inputStijl, paddingLeft: '28px' }} type="number" defaultValue={aowBedrag} key={aowBedrag} />
             </div>
           </div>
           <div>
@@ -87,6 +82,34 @@ function PensioenBlok({ naam, geboortedatum, heeftPartner, pensioenen, setPensio
                 <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#8a8a82', pointerEvents: 'none' }}>mnd</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div>
+          <label style={labelStijl}>AOW-situatie</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {[
+              { waarde: false, label: 'Zonder partner' },
+              { waarde: true, label: 'Met partner' },
+            ].map(opt => (
+              <button
+                key={String(opt.waarde)}
+                onClick={() => setAowMetPartner(opt.waarde)}
+                style={{
+                  height: '42px',
+                  border: '1px solid rgba(42,57,51,0.2)',
+                  borderRadius: '100px',
+                  fontSize: '13px',
+                  fontFamily: 'Lato, sans-serif',
+                  fontWeight: aowMetPartner === opt.waarde ? '700' : '400',
+                  background: aowMetPartner === opt.waarde ? '#2A3933' : '#FFFFFF',
+                  color: aowMetPartner === opt.waarde ? '#FFFFFF' : '#4a4a45',
+                  cursor: 'pointer',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
