@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { AOW_ALLEENSTAAND_JAAR, AOW_PARTNER_JAAR, AOW_LEEFTIJD_TABEL } from '@/lib/constants';
 
 const inputStijl = { width: '100%', boxSizing: 'border-box', height: '42px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 16px', fontSize: '14px', fontFamily: 'Lato, sans-serif', color: '#4a4a45', background: '#FFFFFF', outline: 'none' };
 const labelStijl = { fontSize: '13px', fontWeight: '300', color: '#8a8a82', display: 'block', marginBottom: '6px', fontFamily: 'Lato, sans-serif' };
@@ -9,24 +10,7 @@ const kaartStijl = { background: '#FFFFFF', borderRadius: '20px', padding: '28px
 function berekenAowLeeftijd(geboortedatum) {
   if (!geboortedatum) return { jaren: 67, maanden: 0 };
   const d = new Date(geboortedatum);
-  const tabel = [
-    { van: '1956-06-01', tot: '1957-02-28', jaren: 66, maanden: 10 },
-    { van: '1957-03-01', tot: '1960-12-31', jaren: 67, maanden: 0 },
-    { van: '1961-01-01', tot: '1964-09-30', jaren: 67, maanden: 3 },
-    { van: '1964-10-01', tot: '1966-09-30', jaren: 67, maanden: 3 },
-    { van: '1966-10-01', tot: '1970-06-30', jaren: 67, maanden: 6 },
-    { van: '1970-07-01', tot: '1973-03-31', jaren: 67, maanden: 9 },
-    { van: '1973-04-01', tot: '1975-12-31', jaren: 68, maanden: 0 },
-    { van: '1976-01-01', tot: '1978-09-30', jaren: 68, maanden: 3 },
-    { van: '1978-10-01', tot: '1982-06-30', jaren: 68, maanden: 6 },
-    { van: '1982-07-01', tot: '1985-03-31', jaren: 68, maanden: 9 },
-    { van: '1985-04-01', tot: '1988-12-31', jaren: 69, maanden: 0 },
-    { van: '1989-01-01', tot: '1991-09-30', jaren: 69, maanden: 3 },
-    { van: '1991-10-01', tot: '1995-06-30', jaren: 69, maanden: 6 },
-    { van: '1995-07-01', tot: '1999-03-31', jaren: 69, maanden: 9 },
-    { van: '1999-04-01', tot: '2000-12-31', jaren: 70, maanden: 0 },
-  ];
-  for (const rij of tabel) {
+  for (const rij of AOW_LEEFTIJD_TABEL) {
     if (d >= new Date(rij.van) && d <= new Date(rij.tot)) return { jaren: rij.jaren, maanden: rij.maanden };
   }
   return { jaren: 70, maanden: 0 };
@@ -37,8 +21,8 @@ function PensioenBlok({ naam, geboortedatum, heeftPartner, pensioenen, setPensio
   const [aowMetPartner, setAowMetPartner] = useState(heeftPartner);
 
   const aowBedrag = aowMetPartner
-    ? Math.round((1122.12 + 76.10) * 12)
-    : Math.round((1637.57 + 106.55) * 12);
+    ? Math.round(AOW_PARTNER_JAAR)
+    : Math.round(AOW_ALLEENSTAAND_JAAR);
 
   function voegToe() {
     setPensioenen([...pensioenen, { id: Date.now(), aanbieder: '', bedrag: '', jaren: 67, maanden: 0 }]);

@@ -84,8 +84,8 @@ export default function StapUitgaven({ gezin, beginWaarden, onVolgende, onVorige
   const klantNaam = gezin?.klant?.voornaam || 'Klant';
   const partnerNaam = gezin?.partner?.voornaam || 'Partner';
 
-  const [leningdelen, setLeningdelen] = useState(beginWaarden?.leningdelen || []);
-  const [spaaren, setSpaaren] = useState(beginWaarden?.spaaren || []);
+  const [sparen, setSparen] = useState(beginWaarden?.sparen || []);
+  const [beleggen, setBeleggen] = useState(beginWaarden?.beleggen || []);
   const [lijfrentes, setLijfrentes] = useState(beginWaarden?.lijfrentes || []);
   const [overig, setOverig] = useState(beginWaarden?.overig || []);
 
@@ -107,79 +107,60 @@ export default function StapUitgaven({ gezin, beginWaarden, onVolgende, onVorige
         Uitgaven en vermogensopbouw.
       </h2>
 
-      {/* Hypotheek */}
+      {/* Sparen */}
       <div style={kaartStijl}>
-        <p style={sectieStijl}>Hypotheek</p>
-        {leningdelen.map((l, index) => {
-          const maandlast = berekenMaandlast(l.schuld, l.rente, l.einddatum, l.type);
-          return (
-            <ItemBlok key={l.id} titel={`Leningdeel ${index + 1}`} onVerwijder={() => verwijder(setLeningdelen, l.id)}>
-              <div style={rij3}>
-                <div>
-                  <label style={labelStijl}>Huidige schuld</label>
-                  <EuroInput value={l.schuld} onChange={e => update(setLeningdelen, l.id, 'schuld', e.target.value)} />
-                </div>
-                <div>
-                  <label style={labelStijl}>Rente (%)</label>
-                  <input style={inputStijl} type="number" step="0.01" placeholder="0.00" value={l.rente} onChange={e => update(setLeningdelen, l.id, 'rente', e.target.value)} />
-                </div>
-                <div>
-                  <label style={labelStijl}>Einddatum lening</label>
-                  <input style={{ ...inputStijl, borderRadius: '12px' }} type="date" value={l.einddatum} onChange={e => update(setLeningdelen, l.id, 'einddatum', e.target.value)} />
-                </div>
-              </div>
-              <div style={rij2}>
-                <div>
-                  <label style={labelStijl}>Type lening</label>
-                  <SelectWrapper style={selectStijl} value={l.type} onChange={e => update(setLeningdelen, l.id, 'type', e.target.value)}>
-                    <option value="annuitair">Annuitair</option>
-                    <option value="lineair">Lineair</option>
-                    <option value="aflossingsvrij">Aflossingsvrij</option>
-                  </SelectWrapper>
-                </div>
-                <div>
-                  <label style={labelStijl}>Hypotheekrenteaftrek</label>
-                  <ToggleJaNee value={l.hra} onChange={v => update(setLeningdelen, l.id, 'hra', v)} />
-                </div>
-              </div>
-              {maandlast && (
-                <div style={{ background: '#FFFFFF', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '13px', color: '#8a8a82', fontFamily: 'Lato, sans-serif' }}>Berekende maandlast</span>
-                  <span style={{ fontSize: '16px', fontWeight: '700', color: '#2A3933', fontFamily: 'Lato, sans-serif' }}>{fmt(maandlast)}</span>
-                </div>
-              )}
-            </ItemBlok>
-          );
-        })}
-        <ToevoegenKnop label="Leningdeel toevoegen" onClick={() => nieuw(setLeningdelen, { schuld: '', rente: '', einddatum: '', type: 'annuitair', hra: 'nee' })} />
-      </div>
-
-      {/* Sparen en beleggen */}
-      <div style={kaartStijl}>
-        <p style={sectieStijl}>Sparen en beleggen</p>
-        {spaaren.map((s, index) => (
-          <ItemBlok key={s.id} titel={`Rekening ${index + 1}`} onVerwijder={() => verwijder(setSpaaren, s.id)}>
+        <p style={sectieStijl}>Sparen</p>
+        {sparen.map((s, index) => (
+          <ItemBlok key={s.id} titel={`Rekening ${index + 1}`} onVerwijder={() => verwijder(setSparen, s.id)}>
             <div style={rij3}>
               <div>
                 <label style={labelStijl}>Maandelijkse inleg</label>
-                <EuroInput value={s.inleg} onChange={e => update(setSpaaren, s.id, 'inleg', e.target.value)} />
+                <EuroInput value={s.inleg} onChange={e => update(setSparen, s.id, 'inleg', e.target.value)} />
               </div>
               <div>
                 <label style={labelStijl}>Huidige waarde</label>
-                <EuroInput value={s.waarde} onChange={e => update(setSpaaren, s.id, 'waarde', e.target.value)} />
+                <EuroInput value={s.waarde} onChange={e => update(setSparen, s.id, 'waarde', e.target.value)} />
               </div>
               <div>
                 <label style={labelStijl}>Verwacht rendement (%)</label>
-                <input style={inputStijl} type="number" step="0.1" placeholder="0.0" value={s.rendement} onChange={e => update(setSpaaren, s.id, 'rendement', e.target.value)} />
+                <input style={inputStijl} type="number" step="0.1" placeholder="0.0" value={s.rendement} onChange={e => update(setSparen, s.id, 'rendement', e.target.value)} />
               </div>
             </div>
             <div>
               <label style={labelStijl}>Meerekenen om pensioengat te dichten</label>
-              <ToggleJaNee value={s.pensioengat} onChange={v => update(setSpaaren, s.id, 'pensioengat', v)} />
+              <ToggleJaNee value={s.pensioengat} onChange={v => update(setSparen, s.id, 'pensioengat', v)} />
             </div>
           </ItemBlok>
         ))}
-        <ToevoegenKnop label="Rekening toevoegen" onClick={() => nieuw(setSpaaren, { inleg: '', waarde: '', rendement: '', pensioengat: 'nee' })} />
+        <ToevoegenKnop label="Rekening toevoegen" onClick={() => nieuw(setSparen, { inleg: '', waarde: '', rendement: '', pensioengat: 'nee' })} />
+      </div>
+
+      {/* Beleggen */}
+      <div style={kaartStijl}>
+        <p style={sectieStijl}>Beleggen</p>
+        {beleggen.map((b, index) => (
+          <ItemBlok key={b.id} titel={`Beleggingsrekening ${index + 1}`} onVerwijder={() => verwijder(setBeleggen, b.id)}>
+            <div style={rij3}>
+              <div>
+                <label style={labelStijl}>Maandelijkse inleg</label>
+                <EuroInput value={b.inleg} onChange={e => update(setBeleggen, b.id, 'inleg', e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStijl}>Huidige waarde</label>
+                <EuroInput value={b.waarde} onChange={e => update(setBeleggen, b.id, 'waarde', e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStijl}>Verwacht rendement (%)</label>
+                <input style={inputStijl} type="number" step="0.1" placeholder="0.0" value={b.rendement} onChange={e => update(setBeleggen, b.id, 'rendement', e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label style={labelStijl}>Meerekenen om pensioengat te dichten</label>
+              <ToggleJaNee value={b.pensioengat} onChange={v => update(setBeleggen, b.id, 'pensioengat', v)} />
+            </div>
+          </ItemBlok>
+        ))}
+        <ToevoegenKnop label="Beleggingsrekening toevoegen" onClick={() => nieuw(setBeleggen, { inleg: '', waarde: '', rendement: '', pensioengat: 'nee' })} />
       </div>
 
       {/* Lijfrente */}
@@ -241,7 +222,7 @@ export default function StapUitgaven({ gezin, beginWaarden, onVolgende, onVorige
         <button onClick={onVorige} style={{ width: '100%', padding: '14px 28px', fontSize: '15px', fontWeight: '700', background: 'transparent', color: '#2A3933', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', cursor: 'pointer', fontFamily: 'Lato, sans-serif' }}>
           ← Vorige
         </button>
-        <button onClick={() => onVolgende({ leningdelen, spaaren, lijfrentes, overig })} style={{ width: '100%', padding: '14px 28px', fontSize: '15px', fontWeight: '700', background: '#2A3933', color: '#FFFFFF', border: 'none', borderRadius: '100px', cursor: 'pointer', fontFamily: 'Lato, sans-serif' }}>
+        <button onClick={() => onVolgende({ sparen, beleggen, lijfrentes, overig })} style={{ width: '100%', padding: '14px 28px', fontSize: '15px', fontWeight: '700', background: '#2A3933', color: '#FFFFFF', border: 'none', borderRadius: '100px', cursor: 'pointer', fontFamily: 'Lato, sans-serif' }}>
           Volgende →
         </button>
       </div>
