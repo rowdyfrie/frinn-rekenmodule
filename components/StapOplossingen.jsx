@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { AANBIEDERS } from '@/lib/aanbieders';
 import { BOX1_VOOR_AOW, BOX1_NA_AOW, WONINGWAARDE_STIJGING, BOX3_VRIJSTELLING_PERSOON, BOX3_FICTIEF_RENDEMENT_SPAREN, BOX3_FICTIEF_RENDEMENT_BELEGGEN, BOX3_TARIEF, AOW_LEEFTIJD_TABEL, AOW_PARTNER_JAAR, AOW_ALLEENSTAAND_JAAR,
   AHK_MAX, AHK_AFBOUW_START, AHK_AFBOUW_EIND, AHK_AFBOUW_TARIEF,
   ARBEIDSKORTING_MAX, ARBEIDSKORTING_OPBOUW_1_TARIEF, ARBEIDSKORTING_OPBOUW_1_GRENS,
@@ -127,6 +128,14 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
   const [oplLijfrentePartnerRendement, setOplLijfrentePartnerRendement] = useState(6);
   const [oplBvBedrag, setOplBvBedrag] = useState(0);
   const [oplBvRendement, setOplBvRendement] = useState(6);
+
+  const [oplAanbieders, setOplAanbieders] = useState({
+    sparen:           { naam: '', toelichting: '' },
+    beleggen:         { naam: '', toelichting: '' },
+    lijfrenteKlant:   { naam: '', toelichting: '' },
+    lijfrentePartner: { naam: '', toelichting: '' },
+    bv:               { naam: '', toelichting: '' },
+  });
 
   // === Inkomsten & jaarruimte ===
   const klantBrutoArbeid = (inkomsten?.klantInkomsten || []).reduce((s, i) => s + (parseFloat(i.bedrag) || 0), 0);
@@ -365,6 +374,8 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
           eindvermogen: oplSparenEindvermogen,
           fiscaleWerking: 'Vrij sparen (box 3)',
           box3Druk: box3DragSparenPct,
+          aanbieder: oplAanbieders.sparen.naam,
+          aanbiederToelichting: oplAanbieders.sparen.toelichting,
         } : null,
 
         beleggen: oplBeleggenBedrag > 0 ? {
@@ -374,6 +385,8 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
           eindvermogen: oplBeleggenEindvermogen,
           fiscaleWerking: 'Vrij beleggen (box 3)',
           box3Druk: box3DragBeleggenPct,
+          aanbieder: oplAanbieders.beleggen.naam,
+          aanbiederToelichting: oplAanbieders.beleggen.toelichting,
         } : null,
 
         lijfrenteKlant: oplLijfrenteBedrag > 0 ? {
@@ -388,6 +401,8 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
           jaarruimte: jaarruimte,
           maandMax: maandMax,
           fiscaleWerking: `Lijfrente — inleg aftrekbaar (${Math.round(klantInlegTarief * 100)}%), uitkering belast (${Math.round(uitkeringsDecimaalEffectief * 1000) / 10}%)`,
+          aanbieder: oplAanbieders.lijfrenteKlant.naam,
+          aanbiederToelichting: oplAanbieders.lijfrenteKlant.toelichting,
         } : null,
 
         lijfrentePartner: (heeftPartner && oplLijfrentePartnerBedrag > 0) ? {
@@ -402,6 +417,8 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
           jaarruimte: partnerJaarruimte,
           maandMax: partnerMaandMax,
           fiscaleWerking: `Lijfrente — inleg aftrekbaar (${Math.round(partnerInlegTarief * 100)}%), uitkering belast (${Math.round(uitkeringsDecimaalEffectiefPartner * 1000) / 10}%)`,
+          aanbieder: oplAanbieders.lijfrentePartner.naam,
+          aanbiederToelichting: oplAanbieders.lijfrentePartner.toelichting,
         } : null,
 
         bv: (bv?.bvAanwezig === 'ja' && oplBvBedrag > 0) ? {
@@ -414,6 +431,8 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
           effectiefBox2Tarief: Math.round(oplBvEffectiefBox2Tarief * 100),
           eindvermogenNettoNaBox2: oplBvNettoNaBox2,
           fiscaleWerking: `Opbouw in BV — Vpb (19%) over winst, box 2 (${Math.round(oplBvEffectiefBox2Tarief * 100)}% effectief) bij uitkering`,
+          aanbieder: oplAanbieders.bv.naam,
+          aanbiederToelichting: oplAanbieders.bv.toelichting,
         } : null,
       },
 
@@ -471,6 +490,54 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
     .sort((a, b) => b.score - a.score)
     .map((item, idx) => [item.key, idx])
   );
+
+  function kiesAanbieder(type, naam) {
+    const aanbiedersCategorie = { lijfrenteKlant: 'lijfrente', lijfrentePartner: 'lijfrente' }[type] ?? type;
+    const aanbieder = (AANBIEDERS[aanbiedersCategorie] || []).find(a => a.naam === naam);
+    setOplAanbieders(prev => ({
+      ...prev,
+      [type]: { naam, toelichting: aanbieder?.toelichting ?? '' },
+    }));
+  }
+
+  function AanbiederSelector({ type, bedrag }) {
+    if (!bedrag || bedrag <= 0) return null;
+    const { naam, toelichting } = oplAanbieders[type];
+    // lijfrenteKlant en lijfrentePartner vallen beide onder de 'lijfrente' categorie in AANBIEDERS
+    const aanbiedersCategorie = { lijfrenteKlant: 'lijfrente', lijfrentePartner: 'lijfrente' }[type] ?? type;
+    const lijst = AANBIEDERS[aanbiedersCategorie] || [];
+    if (lijst.length === 0) return null;
+    return (
+      <div style={{ marginBottom: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <span style={{ fontSize: '12px', color: '#8a8a82', fontFamily: 'Lato, sans-serif' }}>Aanbieder</span>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={naam}
+              onChange={e => kiesAanbieder(type, e.target.value)}
+              style={{ height: '30px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px',
+                       padding: '0 28px 0 12px', fontSize: '12px', fontFamily: 'Lato, sans-serif',
+                       background: '#fff', color: naam ? '#2A3933' : '#8a8a82', outline: 'none',
+                       cursor: 'pointer', appearance: 'none' }}
+            >
+              <option value="">— Kies aanbieder —</option>
+              {lijst.map(a => <option key={a.naam} value={a.naam}>{a.naam}</option>)}
+            </select>
+            <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                           pointerEvents: 'none', fontSize: '10px', color: '#8a8a82' }}>▾</span>
+          </div>
+        </div>
+        {naam && toelichting && (
+          <p style={{ fontSize: '12px', color: '#4a4a45', fontFamily: 'Lato, sans-serif',
+                      lineHeight: 1.5, margin: '0', padding: '8px 12px',
+                      background: '#FFFFFF', borderRadius: '10px',
+                      border: '1px solid rgba(42,57,51,0.1)' }}>
+            {toelichting}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   function RendementInput({ value, onChange }) {
     return (
@@ -657,6 +724,7 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
               <input type="number" min="0" max={oplSparenMax} step="10" value={oplSparenBedrag} onChange={e => setOplSparenBedrag(Math.min(oplSparenMax, Math.max(0, Number(e.target.value))))} style={{ width: '100px', height: '30px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 12px', fontSize: '13px', fontFamily: 'Lato, sans-serif', textAlign: 'right', outline: 'none', background: '#fff' }} />
             </div>
             <VoortgangsBalk value={oplSparenBedrag} max={oplSparenMax} />
+            <AanbiederSelector type="sparen" bedrag={oplSparenBedrag} />
             <div style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span style={{ fontSize: '12px', color: '#8a8a82' }}>Box 3 belastingdruk ({fmtPct(box3DragSparenPct)}/jr)</span>
@@ -683,6 +751,7 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
               <input type="number" min="0" max={oplBeleggenMax} step="10" value={oplBeleggenBedrag} onChange={e => setOplBeleggenBedrag(Math.min(oplBeleggenMax, Math.max(0, Number(e.target.value))))} style={{ width: '100px', height: '30px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 12px', fontSize: '13px', fontFamily: 'Lato, sans-serif', textAlign: 'right', outline: 'none', background: '#fff' }} />
             </div>
             <VoortgangsBalk value={oplBeleggenBedrag} max={oplBeleggenMax} />
+            <AanbiederSelector type="beleggen" bedrag={oplBeleggenBedrag} />
             <div style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span style={{ fontSize: '12px', color: '#8a8a82' }}>Box 3 belastingdruk ({fmtPct(box3DragBeleggenPct)}/jr)</span>
@@ -714,6 +783,7 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
                   <input type="number" min="0" max={oplLijfrenteMax} step="10" value={oplLijfrenteBedrag} onChange={e => setOplLijfrenteBedrag(Math.min(oplLijfrenteMax, Math.max(0, Number(e.target.value))))} style={{ width: '100px', height: '30px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 12px', fontSize: '13px', fontFamily: 'Lato, sans-serif', textAlign: 'right', outline: 'none', background: '#fff' }} />
                 </div>
                 <VoortgangsBalk value={oplLijfrenteBedrag} max={oplLijfrenteMax} />
+                <AanbiederSelector type="lijfrenteKlant" bedrag={oplLijfrenteBedrag} />
                 <div style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ fontSize: '12px', color: '#8a8a82' }}>Belastingvoordeel inleg ({Math.round(klantInlegTarief * 100)}% effectief)</span>
@@ -777,6 +847,7 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
                     <input type="number" min="0" max={oplLijfrentePartnerMax} step="10" value={oplLijfrentePartnerBedrag} onChange={e => setOplLijfrentePartnerBedrag(Math.min(oplLijfrentePartnerMax, Math.max(0, Number(e.target.value))))} style={{ width: '100px', height: '30px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 12px', fontSize: '13px', fontFamily: 'Lato, sans-serif', textAlign: 'right', outline: 'none', background: '#fff' }} />
                   </div>
                   <VoortgangsBalk value={oplLijfrentePartnerBedrag} max={oplLijfrentePartnerMax} />
+                  <AanbiederSelector type="lijfrentePartner" bedrag={oplLijfrentePartnerBedrag} />
                   <div style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{ fontSize: '12px', color: '#8a8a82' }}>Belastingvoordeel inleg ({Math.round(partnerInlegTarief * 100)}% effectief)</span>
@@ -836,6 +907,7 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
                 <input type="number" min="0" max={oplBvMax} step="10" value={oplBvBedrag} onChange={e => setOplBvBedrag(Math.min(oplBvMax, Math.max(0, Number(e.target.value))))} style={{ width: '100px', height: '30px', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', padding: '0 12px', fontSize: '13px', fontFamily: 'Lato, sans-serif', textAlign: 'right', outline: 'none', background: '#fff' }} />
               </div>
               <VoortgangsBalk value={oplBvBedrag} max={oplBvMax} />
+              <AanbiederSelector type="bv" bedrag={oplBvBedrag} />
               <div style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <span style={{ fontSize: '12px', color: '#8a8a82' }}>Bruto jaarbedrag</span>

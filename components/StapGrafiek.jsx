@@ -780,7 +780,7 @@ export default function StapGrafiek({ gezin, inkomsten, pensioen, bv, uitgaven, 
         ctx.roundRect(x, nulY - h, barWidth, h, [3, 3, 0, 0]);
         ctx.fill();
       } else {
-        ctx.fillStyle = '#f9e9e9';
+        ctx.fillStyle = '#e05252';
         ctx.beginPath();
         ctx.roundRect(x, nulY, barWidth, h, [0, 0, 3, 3]);
         ctx.fill();
@@ -933,7 +933,7 @@ export default function StapGrafiek({ gezin, inkomsten, pensioen, bv, uitgaven, 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
           {[
             { kleur: '#c8e86a', label: 'Overschot' },
-            { kleur: '#f9e9e9', label: 'Tekort', border: true },
+            { kleur: '#e05252', label: 'Tekort' },
           ].map((item, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: item.kleur, border: item.border ? '1px solid #cc4444' : 'none' }} />
@@ -969,7 +969,7 @@ export default function StapGrafiek({ gezin, inkomsten, pensioen, bv, uitgaven, 
             ))}
             <div style={{ background: '#2A3933', borderRadius: '12px', padding: '14px' }}>
               <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>Totaal</div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: totaalSom >= 0 ? '#c8e86a' : '#f9e9e9' }}>{fmtEuro(totaalSom)}</div>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: totaalSom >= 0 ? '#c8e86a' : '#e05252' }}>{fmtEuro(totaalSom)}</div>
             </div>
           </div>
         </div>
@@ -1252,7 +1252,7 @@ export default function StapGrafiek({ gezin, inkomsten, pensioen, bv, uitgaven, 
               <span style={{ fontSize: '12px', fontWeight: '600', color: '#cc4444' }}>{fmtEuro(tooltip.d.benodigdInkomen)}</span>
             </div>
           </div>
-          <div style={{ background: tooltip.d.verschil >= 0 ? '#c8e86a' : '#f9e9e9', borderRadius: '10px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ background: tooltip.d.verschil >= 0 ? '#c8e86a' : '#e05252', borderRadius: '10px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '12px', fontWeight: '700', color: '#2A3933' }}>{tooltip.d.verschil >= 0 ? 'Overschot per maand' : 'Tekort per maand'}</span>
             <span style={{ fontSize: '12px', fontWeight: '700', color: tooltip.d.verschil >= 0 ? '#2A3933' : '#cc4444' }}>{fmtEuro(Math.abs(tooltip.d.verschil))}</span>
           </div>
