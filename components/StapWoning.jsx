@@ -115,7 +115,7 @@ export default function StapWoning({ beginWaarden, onVolgende, onVorige }) {
       </h2>
 
       <div style={kaartStijl}>
-        <label style={labelStijl}>Heeft u een eigen woning?</label>
+        <label style={labelStijl}>Heb je een eigen woning?</label>
         <ToggleJaNee value={heeftWoning} onChange={setHeeftWoning} />
       </div>
 

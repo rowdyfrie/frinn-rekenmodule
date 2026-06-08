@@ -1057,7 +1057,36 @@ export default function StapGrafiek({ gezin, inkomsten, pensioen, bv, uitgaven, 
         <button onClick={onVorige} style={{ width: '100%', padding: '14px 28px', fontSize: '15px', fontWeight: '700', background: 'transparent', color: '#2A3933', border: '1px solid rgba(42,57,51,0.2)', borderRadius: '100px', cursor: 'pointer', fontFamily: 'Lato, sans-serif' }}>
           ← Vorige
         </button>
-        <button onClick={() => onVolgende({ pensioengat, klantPensioenJaar })} style={{ width: '100%', padding: '14px 28px', fontSize: '15px', fontWeight: '700', background: '#2A3933', color: '#FFFFFF', border: 'none', borderRadius: '100px', cursor: 'pointer', fontFamily: 'Lato, sans-serif' }}>
+        <button onClick={async () => {
+            async function canvasToPng(ref) {
+              if (!ref?.current) return null;
+              return new Promise(resolve => {
+                ref.current.toBlob(blob => {
+                  if (blob) blob.arrayBuffer().then(resolve).catch(() => resolve(null));
+                  else resolve(null);
+                }, 'image/png');
+              });
+            }
+            const [inkomenUitgaven, tekortOverschot, vermogen] = await Promise.all([
+              canvasToPng(canvasRef),
+              canvasToPng(canvasTekortRef),
+              canvasToPng(canvasVermogenRef),
+            ]);
+            onVolgende({
+              pensioengat,
+              klantPensioenJaar,
+              grafiekData: data.map(d => ({
+                jaar: d.jaar,
+                inkomen: d.inkomen,
+                uitgaven: d.uitgaven,
+                benodigdInkomen: d.benodigdInkomen,
+                vrijBesteedbaar: d.vrijBesteedbaar,
+                verschil: d.verschil,
+                ...(d.jaar === huidigJaar ? { detail: d.detail } : {}),
+              })),
+              grafiekAfbeeldingen: { inkomenUitgaven, tekortOverschot, vermogen },
+            });
+          }} style={{ width: '100%', padding: '14px 28px', fontSize: '15px', fontWeight: '700', background: '#2A3933', color: '#FFFFFF', border: 'none', borderRadius: '100px', cursor: 'pointer', fontFamily: 'Lato, sans-serif' }}>
           Volgende →
         </button>
       </div>

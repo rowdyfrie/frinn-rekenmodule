@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { generateRapport } from '@/lib/generateRapport';
 import StapGezin from '@/components/StapGezin';
 import StapInkomsten from '@/components/StapInkomsten';
 import StapPensioen from '@/components/StapPensioen';
@@ -17,7 +18,7 @@ export default function Home() {
   const [woning, setWoning] = useState({ woningwaarde: '', waardestijging: '5.7', leningdelen: [] });
   const [bv, setBv] = useState({ bvAanwezig: 'nee', bvs: [] });
   const [uitgaven, setUitgaven] = useState({ sparen: [], beleggen: [], lijfrentes: [], overig: [] });
-  const [grafiek, setGrafiek] = useState({ pensioengat: 0, klantPensioenJaar: new Date().getFullYear() });
+  const [grafiek, setGrafiek] = useState({ pensioengat: 0, klantPensioenJaar: new Date().getFullYear(), grafiekData: [] });
 
   function stapGezinKlaar(data) { setGezin(data); setStap(2); }
   function stapInkomstenKlaar(data) { setInkomsten(data); setStap(3); }
@@ -52,7 +53,15 @@ export default function Home() {
         {stap === 5 && <StapBV beginWaarden={bv} onVolgende={stapBVKlaar} onVorige={() => setStap(4)} />}
         {stap === 6 && <StapUitgaven gezin={gezin} beginWaarden={uitgaven} onVolgende={stapUitgavenKlaar} onVorige={() => setStap(5)} />}
         {stap === 7 && <StapGrafiek gezin={gezin} inkomsten={inkomsten} pensioen={pensioen} woning={woning} bv={bv} uitgaven={uitgaven} onVorige={() => setStap(6)} onVolgende={stapGrafiekKlaar} />}
-        {stap === 8 && <StapOplossingen gezin={gezin} inkomsten={inkomsten} bv={bv} woning={woning} pensioengat={grafiek.pensioengat} klantPensioenJaar={grafiek.klantPensioenJaar} onVorige={() => setStap(7)} />}
+        {stap === 8 && <StapOplossingen gezin={gezin} inkomsten={inkomsten} pensioen={pensioen} uitgaven={uitgaven} bv={bv} woning={woning} pensioengat={grafiek.pensioengat} klantPensioenJaar={grafiek.klantPensioenJaar} grafiekData={grafiek.grafiekData} grafiekAfbeeldingen={grafiek.grafiekAfbeeldingen} onVorige={() => setStap(7)} onExport={async (exportData) => {
+          const blob = await generateRapport(exportData);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Pensioenplanning_${exportData.gezin.klant.achternaam || 'klant'}_${exportData.klantPensioenJaar}.docx`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }} />}
       </div>
     </main>
   );
