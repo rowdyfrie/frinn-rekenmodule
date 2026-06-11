@@ -7,7 +7,7 @@ import { BOX1_VOOR_AOW, BOX1_NA_AOW, WONINGWAARDE_STIJGING, BOX3_VRIJSTELLING_PE
   ARBEIDSKORTING_OPBOUW_2_TARIEF, ARBEIDSKORTING_OPBOUW_2_GRENS,
   ARBEIDSKORTING_AFBOUW_TARIEF, ARBEIDSKORTING_AFBOUW_GRENS,
   OUDERENKORTING_MAX, OUDERENKORTING_AFBOUW_START, OUDERENKORTING_AFBOUW_EIND, OUDERENKORTING_AFBOUW_TARIEF,
-  BOX2_SCHIJVEN,
+  BOX2_SCHIJVEN, VPB_SCHIJVEN,
 } from '@/lib/constants';
 
 const kaartStijl = { background: '#FFFFFF', borderRadius: '20px', padding: '28px', border: '1px solid rgba(42,57,51,0.1)', marginBottom: '12px' };
@@ -89,6 +89,17 @@ function berekenOuderenkorting(inkomen) {
   return Math.max(0, OUDERENKORTING_MAX - (inkomen - OUDERENKORTING_AFBOUW_START) * OUDERENKORTING_AFBOUW_TARIEF);
 }
 
+function berekenVpb(winst) {
+  if (winst <= 0) return 0;
+  let belasting = 0, vorig = 0;
+  for (const schijf of VPB_SCHIJVEN) {
+    if (winst <= vorig) break;
+    belasting += (Math.min(winst, schijf.grens) - vorig) * schijf.tarief;
+    vorig = schijf.grens;
+  }
+  return belasting;
+}
+
 function berekenBox2(dividend) {
   if (dividend <= 0) return 0;
   let belasting = 0, vorig = 0;
@@ -114,7 +125,7 @@ function effectiefMargTarief(van, naar, naAow, isArbeidsinkomen = false) {
   return Math.max(0, Math.min(1, (extraBox1 + ahkDaling + akDaling + ouderenDaling) / delta));
 }
 
-export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, bv, woning, pensioengat, klantPensioenJaar, grafiekData, grafiekAfbeeldingen, onVorige, onExport }) {
+export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, bv, woning, pensioengat, klantPensioenJaar, grafiekData, grafiekAfbeeldingen, vermogenPensioen, onVorige, onExport }) {
   const huidigJaar = new Date().getFullYear();
   const heeftPartner = !!gezin?.partner;
 
@@ -295,12 +306,33 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
     : uitkeringsDecimaalPartner;
   const oplLijfrentePartnerEindvermogen = oplLijfrentePartnerEindvermogenBruto * (1 - uitkeringsDecimaalEffectiefPartner);
 
-  // BV (netto na Vpb 19%, daarna box 2 bij uitkering)
-  const oplBvNettoMaand = oplBvBedrag * (1 - 0.19);
-  const oplBvEindvermogen = berekenEindwaarde(0, oplBvNettoMaand, oplBvRendement, oplMaanden);
-  const oplBvBox2Belasting = berekenBox2(oplBvEindvermogen);
+  // BV — Vpb als drag op rendement, box 2 via 20-jaar uitkeringsmodel
+  const oplBvVpbDragPct = oplBvRendement * 0.19;
+  const oplBvNettoRendement = Math.max(0, oplBvRendement * (1 - 0.19));
+  const oplBvEindvermogen = berekenEindwaarde(0, oplBvBedrag, oplBvNettoRendement, oplMaanden);
+  const oplBvJaarlijkseUitkering = oplBvEindvermogen / 20;
+  // Toekomstig BV-dividend na pensioendatum: bestaand vermogen groeien → annuïtiseren → Vpb aftrekken
+  const bestaandJaarDividend = (() => {
+    if (bv?.bvAanwezig !== 'ja') return 0;
+    let totalBVVermogen = 0;
+    for (const b of (bv?.bvs || [])) {
+      for (const v of (b.vermogen || [])) {
+        if (v.type === 'spaargeld') {
+          totalBVVermogen += berekenEindwaarde(parseFloat(v.waarde) || 0, (parseFloat(v.jaarlijksBedrag) || 0) / 12, parseFloat(v.rendement) || 4, oplMaanden);
+        } else if (v.type === 'onroerend_goed') {
+          const nettoHuur = (parseFloat(v.huurinkomsten) || 0) - (parseFloat(v.kosten) || 0);
+          totalBVVermogen += berekenEindwaarde(parseFloat(v.waarde) || 0, nettoHuur, parseFloat(v.waardestijging) || 5, oplMaanden);
+        }
+      }
+    }
+    if (totalBVVermogen <= 0) return 0;
+    const jaarUitkering = berekenAnnuiteit(totalBVVermogen, 4, uitkMaandenKlant) * 12;
+    return Math.max(0, jaarUitkering - berekenVpb(jaarUitkering));
+  })();
+  const oplBvBox2PerJaar = berekenBox2(bestaandJaarDividend + oplBvJaarlijkseUitkering) - berekenBox2(bestaandJaarDividend);
+  const oplBvEffectiefBox2Tarief = oplBvJaarlijkseUitkering > 0 ? oplBvBox2PerJaar / oplBvJaarlijkseUitkering : 0;
+  const oplBvBox2Belasting = oplBvEindvermogen * oplBvEffectiefBox2Tarief;
   const oplBvNettoNaBox2 = oplBvEindvermogen - oplBvBox2Belasting;
-  const oplBvEffectiefBox2Tarief = oplBvEindvermogen > 0 ? oplBvBox2Belasting / oplBvEindvermogen : 0;
 
   // === Belastingvoordeel t.o.v. box 3 beleggen (zelfde netto inleg) ===
   // Lijfrente klant: vergelijk netto inleg in box 3 vs. netto eindvermogen lijfrente
@@ -311,8 +343,9 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
   const box3VergelijkLijfrentePartner = berekenEindwaarde(0, oplLijfrentePartnerNettoMaand, Math.max(0, oplLijfrentePartnerRendement - box3DragBeleggenPct), oplMaanden);
   const lijfrenteMeerwaardeVsBox3Partner = oplLijfrentePartnerEindvermogen - box3VergelijkLijfrentePartner;
 
-  // BV: vergelijk netto inleg (na vpb) in box 3 vs. BV netto eindvermogen (na box 2) — eerlijke netto/netto vergelijking
-  const box3VergelijkBV = berekenEindwaarde(0, oplBvNettoMaand, Math.max(0, oplBvRendement - box3DragBeleggenPct), oplMaanden);
+  // BV: zelfde bruto bedrag, maar via box 3 eerst 24,5% box 2 betalen om het geld te onttrekken
+  const box3InlegVanBV = oplBvBedrag * (1 - BOX2_SCHIJVEN[0].tarief);
+  const box3VergelijkBV = berekenEindwaarde(0, box3InlegVanBV, Math.max(0, oplBvRendement - box3DragBeleggenPct), oplMaanden);
   const bvMeerwaardeVsBox3 = oplBvNettoNaBox2 - box3VergelijkBV;
 
   // === Max bedragen per oplossing ===
@@ -329,7 +362,7 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
   const oplLijfrenteMax = Math.min(Math.floor(maandMax), Math.max(10, Math.round(berekenMaandInleg(lijfrenteBrutoDoelKlant, oplLijfrenteRendement, oplMaanden))));
   const lijfrenteBrutoDoelPartner = resterendVoor(3) / Math.max(0.01, 1 - uitkeringsDecimaalPartner);
   const oplLijfrentePartnerMax = Math.min(Math.floor(partnerMaandMax), Math.max(10, Math.round(berekenMaandInleg(lijfrenteBrutoDoelPartner, oplLijfrentePartnerRendement, oplMaanden))));
-  const oplBvMax = Math.max(10, Math.round(berekenMaandInleg(resterendVoor(4), oplBvRendement, oplMaanden) / 0.81));
+  const oplBvMax = Math.max(10, Math.round(berekenMaandInleg(resterendVoor(4), oplBvNettoRendement, oplMaanden)));
 
   const oplTotaalEindvermogen = oplSparenEindvermogen + oplBeleggenEindvermogen + oplLijfrenteEindvermogen + oplLijfrentePartnerEindvermogen + oplBvNettoNaBox2;
   const oplResterendTekort = Math.max(0, pensioengat - oplTotaalEindvermogen);
@@ -423,14 +456,14 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
 
         bv: (bv?.bvAanwezig === 'ja' && oplBvBedrag > 0) ? {
           maandbedrag: oplBvBedrag,
-          brutoBedrag: oplBvBedrag * 12,
-          nettoNaVpb: oplBvNettoMaand * 12,
           rendement: oplBvRendement,
+          vpbDragPct: oplBvVpbDragPct,
+          nettoRendement: oplBvNettoRendement,
           eindvermogen: oplBvEindvermogen,
           box2Belasting: oplBvBox2Belasting,
           effectiefBox2Tarief: Math.round(oplBvEffectiefBox2Tarief * 100),
-          eindvermogenNettoNaBox2: oplBvNettoNaBox2,
-          fiscaleWerking: `Opbouw in BV — Vpb (19%) over winst, box 2 (${Math.round(oplBvEffectiefBox2Tarief * 100)}% effectief) bij uitkering`,
+          nettoNaBox2: oplBvNettoNaBox2,
+          fiscaleWerking: `Opbouw in BV — Vpb (${fmtPct(oplBvVpbDragPct)}/jr rendementsdrag), box 2 (${Math.round(oplBvEffectiefBox2Tarief * 100)}% effectief) bij uitkering`,
           aanbieder: oplAanbieders.bv.naam,
           aanbiederToelichting: oplAanbieders.bv.toelichting,
         } : null,
@@ -447,6 +480,7 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
       // Jaar-voor-jaar grafiekdata (voor rapport en grafiek)
       grafiekData: grafiekData || [],
       grafiekAfbeeldingen: grafiekAfbeeldingen || {},
+      vermogenPensioen: vermogenPensioen || null,
     };
 
     if (onExport) onExport(exportData);
@@ -463,33 +497,14 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
   const toonPartnerZelfdeSchijf = oplLijfrentePartnerBedrag > 0 && partnerMargTarief > 0 && partnerSchijfNaAftrek === partnerMargTarief;
   const toonPartnerSchijfgrensVoordeel = oplLijfrentePartnerBedrag > 0 && partnerSchijfNaAftrek < partnerMargTarief;
 
-  // === Sortering op efficiëntie: netto eindvermogen per netto euro inleg (hypothetisch €100 bruto) ===
-  const H = 100;
-  const scoreSparen = berekenEindwaarde(0, H, oplSparenNettoRendement, oplMaanden) / (H * oplMaanden);
-  const scoreBeleggen = berekenEindwaarde(0, H, oplBeleggenNettoRendement, oplMaanden) / (H * oplMaanden);
-  const scoreLijfrenteKlant = maandMax > 0
-    ? berekenEindwaarde(0, H, oplLijfrenteRendement, oplMaanden) * (1 - uitkeringsDecimaal) / (H * Math.max(0.01, 1 - klantMargTarief) * oplMaanden)
-    : -1;
-  const scoreLijfrentePartner = heeftPartner && partnerMaandMax > 0
-    ? berekenEindwaarde(0, H, oplLijfrentePartnerRendement, oplMaanden) * (1 - uitkeringsDecimaalPartner) / (H * Math.max(0.01, 1 - partnerMargTarief) * oplMaanden)
-    : -1;
-  const scoreBV = bv?.bvAanwezig === 'ja'
-    ? (() => {
-        const brutoBV = berekenEindwaarde(0, H * 0.81, oplBvRendement, oplMaanden);
-        return (brutoBV - berekenBox2(brutoBV)) / (H * 0.81 * oplMaanden);
-      })()
-    : -1;
-  const oplOrder = Object.fromEntries(
-    [
-      { key: 'sparen', score: scoreSparen },
-      { key: 'beleggen', score: scoreBeleggen },
-      { key: 'lijfrenteKlant', score: scoreLijfrenteKlant },
-      { key: 'lijfrentePartner', score: scoreLijfrentePartner },
-      { key: 'bv', score: scoreBV },
-    ]
-    .sort((a, b) => b.score - a.score)
-    .map((item, idx) => [item.key, idx])
-  );
+  // === Vaste volgorde: lijfrente klant, lijfrente partner, BV, beleggen, sparen ===
+  const oplOrder = {
+    lijfrenteKlant:   0,
+    lijfrentePartner: 1,
+    bv:               2,
+    beleggen:         3,
+    sparen:           4,
+  };
 
   function kiesAanbieder(type, naam) {
     const aanbiedersCategorie = { lijfrenteKlant: 'lijfrente', lijfrentePartner: 'lijfrente' }[type] ?? type;
@@ -909,13 +924,9 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
               <VoortgangsBalk value={oplBvBedrag} max={oplBvMax} />
               <AanbiederSelector type="bv" bedrag={oplBvBedrag} />
               <div style={{ background: '#fff', borderRadius: '10px', padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '12px', color: '#8a8a82' }}>Bruto jaarbedrag</span>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#2A3933' }}>{fmtEuro(oplBvBedrag * 12)}</span>
-                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '12px', color: '#8a8a82' }}>Netto na Vpb (19%)</span>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#2A3933' }}>{fmtEuro(oplBvNettoMaand * 12)}/jr</span>
+                  <span style={{ fontSize: '12px', color: '#8a8a82' }}>Vpb belastingdruk ({fmtPct(oplBvVpbDragPct)}/jr)</span>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#cc4444' }}>- {fmtEuro(berekenEindwaarde(0, oplBvBedrag, oplBvRendement, oplMaanden) - oplBvEindvermogen)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid rgba(42,57,51,0.08)', marginBottom: '4px' }}>
                   <span style={{ fontSize: '12px', color: '#8a8a82' }}>Opgebouwd eindvermogen in BV</span>
@@ -934,8 +945,8 @@ export default function StapOplossingen({ gezin, inkomsten, pensioen, uitgaven, 
                 <VoordeeBlok
                   vergelijkBedrag={box3VergelijkBV}
                   meerwaardeVsBox3={bvMeerwaardeVsBox3}
-                  nettoMaand={oplBvNettoMaand}
-                  label="Meerwaarde BV vs. box 3 (netto/netto)"
+                  nettoMaand={box3InlegVanBV}
+                  label="Meerwaarde BV vs. box 3 (na box 2 onttrekking)"
                 />
               )}
             </div>

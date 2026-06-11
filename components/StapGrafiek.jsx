@@ -904,7 +904,7 @@ export default function StapGrafiek({ gezin, inkomsten, pensioen, bv, uitgaven, 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
           {[
             { kleur: '#2A3933', label: 'Vrij besteedbaar' },
-            { kleur: '#c8e86a', label: 'Uitgaven' },
+            { kleur: '#c8e86a', label: 'Veranderende uitgaven' },
             { kleur: '#cc4444', label: 'Benodigd inkomen', lijn: true },
             { kleur: '#2A3933', label: `Pensioen/AOW ${gezin?.klant?.voornaam || ''}`, streep: true },
             ...(heeftPartner ? [{ kleur: '#56705f', label: `Pensioen/AOW ${gezin?.partner?.voornaam || ''}`, streep: true }] : []),
@@ -1082,9 +1082,10 @@ export default function StapGrafiek({ gezin, inkomsten, pensioen, bv, uitgaven, 
                 benodigdInkomen: d.benodigdInkomen,
                 vrijBesteedbaar: d.vrijBesteedbaar,
                 verschil: d.verschil,
-                ...(d.jaar === huidigJaar ? { detail: d.detail } : {}),
+                ...(d.jaar === huidigJaar || d.jaar === klantPensioenJaar + 1 || d.jaar === klantPensioenJaar ? { detail: d.detail } : {}),
               })),
               grafiekAfbeeldingen: { inkomenUitgaven, tekortOverschot, vermogen },
+              vermogenPensioen,
             });
           }} style={{ width: '100%', padding: '14px 28px', fontSize: '15px', fontWeight: '700', background: '#2A3933', color: '#FFFFFF', border: 'none', borderRadius: '100px', cursor: 'pointer', fontFamily: 'Lato, sans-serif' }}>
           Volgende →
